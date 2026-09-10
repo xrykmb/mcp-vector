@@ -53,7 +53,7 @@ MCP（Cursor `mcp.json` 示例）：
 
 ## 演示
 
-索引默认写在 `.mcp-vector/index.json`。`search` 会打印 `id`、余弦相似度、文本、metadata。
+索引默认写在 `.mcp-vector/index.json`。`search` 会打印 `id`、余弦相似度、文本、metadata。同一 `--id` 再次 `upsert` 会覆盖旧向量（重建图），不会留下幽灵邻居。
 
 ## 未来规划
 
