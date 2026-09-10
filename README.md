@@ -2,7 +2,7 @@
 
 轻量 **MCP Server**：把文档变成向量，用 **HNSW** 做近似最近邻（ANN）检索，并支持**元数据过滤**。给 Cursor / Claude 等 Agent 当 RAG 工具用，而不是再包一层巨型向量云。
 
-本仓库刻意保持小：面试时要能讲清 MCP 工具怎么暴露、向量怎么来、HNSW 在搜什么。
+范围收窄：讲清 MCP 工具怎么暴露、向量怎么来、HNSW 在搜什么。
 
 ## 解决什么问题
 
@@ -24,7 +24,7 @@ Agent 需要「按语义找文档」，但 embedding API、索引、过滤经常
 MCP stdio ── tools: upsert_document, search, index_stats
 ```
 
-HNSW 实现是教学向简化版（邻居选取为「最近 M 个」，不是论文里完整 heuristic）。原理与生产库（hnswlib）同一家族，便于面试对照。
+HNSW 实现是简化版（邻居选取为「最近 M 个」，不是论文里完整 heuristic）。原理与生产库（hnswlib）同一家族，便于对照实现差异。
 
 ## 快速启动
 
