@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import json
+import random
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 
 from .embed import hash_embed
 from .hnsw import HNSW
@@ -19,30 +19,30 @@ class Record:
 
 class VectorStore:
     def __init__(self, dim: int = 64) -> None:
-        self.hnsw = HNSW(dim=dim, rng=__import__("random").Random(0))
+        self.hnsw = HNSW(dim=dim, rng=random.Random(0))
         self.records: dict[str, Record] = {}
         self._node_to_id: dict[int, str] = {}
 
     def upsert(self, doc_id: str, text: str, metadata: dict[str, str] | None = None) -> None:
         meta = dict(metadata or {})
-        vector = hash_embed(text, self.hnsw.dim)
-        node = self.hnsw.insert(vector)
-        rec = Record(doc_id=doc_id, text=text, metadata=meta, node=node)
-        self.records[doc_id] = rec
-        self._node_to_id[node] = doc_id
+        if doc_id in self.records:
+            kept = [(r.doc_id, r.text, r.metadata) for r in self.records.values() if r.doc_id != doc_id]
+            self._reset()
+            for item_id, item_text, item_meta in kept:
+                self._insert(item_id, item_text, item_meta)
+        self._insert(doc_id, text, meta)
 
     def search(
         self, query: str, k: int = 5, where: dict[str, str] | None = None
     ) -> list[tuple[Record, float]]:
         vector = hash_embed(query, self.hnsw.dim)
-        # Over-fetch so metadata filters can drop neighbors.
         raw = self.hnsw.search(vector, k=max(k * 4, k))
         hits: list[tuple[Record, float]] = []
         for node, score in raw:
-            doc_id = self._node_to_id.get(node)
-            if not doc_id:
+            mapped = self._node_to_id.get(node)
+            if not mapped:
                 continue
-            rec = self.records[doc_id]
+            rec = self.records[mapped]
             if where and any(rec.metadata.get(key) != value for key, value in where.items()):
                 continue
             hits.append((rec, score))
@@ -67,3 +67,15 @@ class VectorStore:
         for row in data.get("records") or []:
             store.upsert(str(row["doc_id"]), str(row["text"]), dict(row.get("metadata") or {}))
         return store
+
+    def _reset(self) -> None:
+        dim = self.hnsw.dim
+        self.hnsw = HNSW(dim=dim, rng=random.Random(0))
+        self.records = {}
+        self._node_to_id = {}
+
+    def _insert(self, doc_id: str, text: str, metadata: dict[str, str]) -> None:
+        node = self.hnsw.insert(hash_embed(text, self.hnsw.dim))
+        rec = Record(doc_id=doc_id, text=text, metadata=metadata, node=node)
+        self.records[doc_id] = rec
+        self._node_to_id[node] = doc_id
