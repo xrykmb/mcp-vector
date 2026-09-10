@@ -14,6 +14,17 @@ def test_ann_and_metadata_filter() -> None:
     assert all(rec.metadata["source"] == "motor" for rec, _ in filtered)
 
 
+def test_upsert_replaces_same_id() -> None:
+    store = VectorStore()
+    store.upsert("a", "旧文本关于齿轮油位", {"source": "gear"})
+    store.upsert("a", "新文本关于轴承补脂", {"source": "pump"})
+    assert len(store.records) == 1
+    assert store.records["a"].text.startswith("新文本")
+    assert store.records["a"].metadata["source"] == "pump"
+    hits = store.search("轴承 补脂", k=1)
+    assert hits and hits[0][0].doc_id == "a"
+
+
 def test_cli_roundtrip(tmp_path) -> None:
     index = tmp_path / "index.json"
     assert main(["upsert", "--id", "x", "--text", "停机后冷却再开箱", "--index", str(index)]) == 0
